@@ -10,7 +10,7 @@ nexgrid/
 └── frontend/    # React (Vite) + Tailwind CSS
 ```
 
-## Backend Setup
+<!-- ## Backend Setup
 
 ```bash
 cd backend
@@ -62,4 +62,4 @@ Open two terminals — one for `backend` (`uvicorn app.main:app --reload`), one 
 - Full ER diagram: Users, Workspaces, WorkspaceMembers, Collections, Folders, Requests,
   Environments, EnvironmentVariables, Comments, Notifications, TestCases, TestResults
 - Alembic migrations set up
-- Models implemented for all core entities
+- Models implemented for all core entities -->

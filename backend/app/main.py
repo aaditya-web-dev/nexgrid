@@ -1,12 +1,21 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.core.database import Base, engine
 from app.routers import health
-from app import models  # noqa: F401  (ensures models are registered before create_all)
+from app import models  # noqa: F401  (registers all models with SQLAlchemy)
 
-app = FastAPI(title=settings.PROJECT_NAME)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Schema is now managed by Alembic migrations (`alembic upgrade head`),
+    # not by Base.metadata.create_all(). Nothing to do on startup for now.
+    yield
+
+
+app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
 # Allow the React dev server to call this API
 app.add_middleware(
@@ -18,12 +27,6 @@ app.add_middleware(
 )
 
 app.include_router(health.router)
-
-
-@app.on_event("startup")
-def on_startup():
-    # Week 1: create tables directly. From Week 2 onward we switch to Alembic migrations.
-    Base.metadata.create_all(bind=engine)
 
 
 @app.get("/")

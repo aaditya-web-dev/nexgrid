@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.routers import health, auth, workspaces, collections
+from app.routers import health, auth, workspaces, collections, requests, environments
 from app import models  # noqa: F401  (registers all models with SQLAlchemy)
 
 
@@ -30,6 +30,8 @@ app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(workspaces.router)
 app.include_router(collections.router)
+app.include_router(requests.router)
+app.include_router(environments.router)
 
 
 @app.get("/")

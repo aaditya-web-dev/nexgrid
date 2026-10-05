@@ -99,3 +99,30 @@ def resolve_request(
     resolved_body = substitute(body, variables) if body else body
 
     return resolved_url, resolved_headers, resolved_body
+
+
+def resolve_full_request(
+    url: str,
+    query_params: dict,
+    headers: dict,
+    body: str | None,
+    auth_config: dict,
+    environment_id: int | None,
+    db: Session,
+) -> tuple[str, dict, dict, str | None, dict]:
+    """
+    Resolve {{variable}} placeholders across all components of an API request:
+    URL, query parameters, headers, body, and auth configuration.
+    """
+    if environment_id is None:
+        return url, query_params or {}, headers or {}, body, auth_config or {}
+
+    variables = load_variables(environment_id, db)
+
+    resolved_url = substitute(url, variables)
+    resolved_query_params = substitute_dict(query_params or {}, variables)
+    resolved_headers = substitute_dict(headers or {}, variables)
+    resolved_body = substitute(body, variables) if body else body
+    resolved_auth_config = substitute_dict(auth_config or {}, variables)
+
+    return resolved_url, resolved_query_params, resolved_headers, resolved_body, resolved_auth_config

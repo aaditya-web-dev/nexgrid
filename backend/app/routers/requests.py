@@ -21,13 +21,21 @@ from app.models.user import User
 from app.models.workspace import WorkspaceMember
 from app.models.collection import Collection, Folder
 from app.models.api_request import ApiRequest
+from app.models.environment import Environment
+from app.models.testing import RequestExecution
 from app.schemas.request import (
     ApiRequestCreate,
     ApiRequestUpdate,
     ApiRequestResponse,
     ResolvedApiRequestResponse,
 )
+from app.schemas.execution import (
+    RequestExecutionResponse,
+    DirectExecutionRequest,
+    DirectExecutionResponse,
+)
 from app.services.variables import resolve_request
+from app.services.executor import execute_api_request, execute_direct_request
 
 router = APIRouter(tags=["requests"])
 
@@ -260,3 +268,160 @@ def delete_request(
     assert_member(col.workspace_id, current_user, db)
     db.delete(req)
     db.commit()
+
+
+# ===========================================================================
+# Execution Endpoints (Week 6)
+# ===========================================================================
+
+@router.post(
+    "/api/requests/{request_id}/execute",
+    response_model=RequestExecutionResponse,
+    summary="Execute an API request and record execution metrics",
+)
+async def execute_request(
+    request_id: int,
+    current_user: CurrentUser,
+    db: Session = Depends(get_db),
+    environment_id: int | None = Query(
+        None,
+        description="Environment ID for {{variable}} resolution. If omitted, uses default workspace environment if configured.",
+    ),
+    timeout_seconds: float = Query(
+        30.0,
+        ge=1.0,
+        le=120.0,
+        description="Request timeout in seconds (1 to 120s).",
+    ),
+):
+    """
+    Execute the API request using an asynchronous HTTP client:
+    - Resolves all {{variable}} placeholders with the given or default environment.
+    - Applies authentication (Bearer, Basic, API Key).
+    - Sets appropriate Content-Type and payload.
+    - Measures elapsed response time in milliseconds.
+    - Captures status code, response headers, response body, and byte size.
+    - Handles timeouts and network connection errors gracefully.
+    - Records the result in the RequestExecution history table.
+    """
+    req = get_request_or_404(request_id, db)
+    col = get_collection_or_404(req.collection_id, db)
+    assert_member(col.workspace_id, current_user, db)
+
+    # If environment_id was not explicitly specified, check for workspace default environment
+    effective_env_id = environment_id
+    if effective_env_id is None:
+        default_env = (
+            db.query(Environment)
+            .filter(
+                Environment.workspace_id == col.workspace_id,
+                Environment.is_default == True,  # noqa: E712
+            )
+            .first()
+        )
+        if default_env:
+            effective_env_id = default_env.id
+    elif effective_env_id is not None:
+        # Validate that specified environment belongs to the workspace
+        env = (
+            db.query(Environment)
+            .filter(
+                Environment.id == effective_env_id,
+                Environment.workspace_id == col.workspace_id,
+            )
+            .first()
+        )
+        if not env:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Environment {effective_env_id} does not exist in this workspace",
+            )
+
+    execution = await execute_api_request(
+        request=req,
+        db=db,
+        environment_id=effective_env_id,
+        executed_by_id=current_user.id,
+        timeout_seconds=timeout_seconds,
+    )
+
+    return execution
+
+
+@router.get(
+    "/api/requests/{request_id}/executions",
+    response_model=list[RequestExecutionResponse],
+    summary="List execution history for a request",
+)
+def list_request_executions(
+    request_id: int,
+    current_user: CurrentUser,
+    db: Session = Depends(get_db),
+    limit: int = Query(20, ge=1, le=100, description="Max number of execution logs to return"),
+):
+    """Return historical execution records for this request, most recent first."""
+    req = get_request_or_404(request_id, db)
+    col = get_collection_or_404(req.collection_id, db)
+    assert_member(col.workspace_id, current_user, db)
+
+    return (
+        db.query(RequestExecution)
+        .filter(RequestExecution.request_id == request_id)
+        .order_by(RequestExecution.executed_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+
+@router.get(
+    "/api/executions/{execution_id}",
+    response_model=RequestExecutionResponse,
+    summary="Get details of a single execution",
+)
+def get_execution_detail(
+    execution_id: int,
+    current_user: CurrentUser,
+    db: Session = Depends(get_db),
+):
+    """Fetch details of a specific execution event."""
+    execution = db.query(RequestExecution).filter(RequestExecution.id == execution_id).first()
+    if not execution:
+        raise HTTPException(status_code=404, detail="Execution not found")
+
+    req = get_request_or_404(execution.request_id, db)
+    col = get_collection_or_404(req.collection_id, db)
+    assert_member(col.workspace_id, current_user, db)
+
+    return execution
+
+
+@router.post(
+    "/api/requests/quick-run",
+    response_model=DirectExecutionResponse,
+    summary="Directly test any HTTP endpoint without saving it first",
+)
+async def quick_run_endpoint(
+    payload: DirectExecutionRequest,
+    current_user: CurrentUser,
+    timeout_seconds: float = Query(
+        30.0,
+        ge=1.0,
+        le=120.0,
+        description="Timeout in seconds",
+    ),
+):
+    """
+    Instantly sends an HTTP request to any target URL and returns live response metrics.
+    No workspace or collection setup required.
+    """
+    result = await execute_direct_request(
+        url=payload.url,
+        method=payload.method,
+        headers=payload.headers,
+        params=payload.query_params,
+        body=payload.body,
+        timeout_seconds=timeout_seconds,
+    )
+    return result
+
+

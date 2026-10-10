@@ -26,12 +26,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(workspaces.router)
 app.include_router(collections.router)
 app.include_router(requests.router)
 app.include_router(environments.router)
+app.include_router(health.router)
 
 
 @app.get("/")

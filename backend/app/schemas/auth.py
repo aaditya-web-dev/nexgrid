@@ -9,15 +9,15 @@ from pydantic import BaseModel, EmailStr, Field
 # ---------------------------------------------------------------------------
 class UserRegister(BaseModel):
     """POST /api/auth/register request body."""
-    username: str = Field(..., min_length=3, max_length=50, examples=["ashok"])
-    email: EmailStr = Field(..., examples=["ashok@nexgrid.dev"])
-    full_name: str | None = Field(None, max_length=120, examples=["Ashok Kumar"])
+    username: str = Field(..., min_length=3, max_length=50, examples=["aaditya"])
+    email: EmailStr = Field(..., examples=["aaditya@nexgrid.dev"])
+    full_name: str | None = Field(None, max_length=120, examples=["Aaditya Pandey"])
     password: str = Field(..., min_length=8, max_length=128, examples=["S3cureP@ss!"])
 
 
 class UserLogin(BaseModel):
     """POST /api/auth/login request body."""
-    username: str = Field(..., examples=["ashok"])
+    username: str = Field(..., examples=["aaditya"])
     password: str = Field(..., examples=["S3cureP@ss!"])
 
 

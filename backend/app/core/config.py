@@ -1,27 +1,44 @@
-"""
-Application configuration, loaded from environment variables / .env file.
-"""
+
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+# Backend root directory
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+
 class Settings(BaseSettings):
+
     # General
-    PROJECT_NAME: str = "Nexgrid"
-    ENV: str = "development"
+    PROJECT_NAME: str
+    ENV: str
 
-    # Database (SQLite by default for easy local dev; swap for MySQL in prod)
-    DATABASE_URL: str = "sqlite:///./nexgrid.db"
+    # Database
+    DATABASE_URL: str
 
-    # Auth / JWT
-    SECRET_KEY: str = "CHANGE_ME_IN_PRODUCTION"
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    # Authentication / JWT
+    SECRET_KEY: str
+    ALGORITHM: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+    REFRESH_TOKEN_EXPIRE_DAYS: int
 
     # CORS
-    FRONTEND_ORIGIN: str = "http://localhost:5173"
+    FRONTEND_ORIGIN: str
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # AI Test Generation
+    OPENAI_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
+    AI_PROVIDER: str
+    AI_MAX_TEST_CASES: int
+
+    model_config = SettingsConfigDict(
+        env_file=BASE_DIR / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        case_sensitive=True
+    )
 
 
 settings = Settings()
+

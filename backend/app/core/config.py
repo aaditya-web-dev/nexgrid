@@ -27,10 +27,11 @@ class Settings(BaseSettings):
     FRONTEND_ORIGIN: str
 
     # AI Test Generation
-    OPENAI_API_KEY: str = ""
+    # OPENAI_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
-    AI_PROVIDER: str
-    AI_MAX_TEST_CASES: int
+    GEMINI_MODEL: str = ""
+    AI_PROVIDER: str = ""
+    AI_MAX_TEST_CASES: int = 5
 
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",

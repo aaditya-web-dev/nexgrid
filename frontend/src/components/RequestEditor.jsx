@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Lock, Unlock, Save, Send, Pencil, Eye, EyeOff, Wand2, CheckCircle2, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Lock, Unlock, Save, Send, Pencil, Eye, EyeOff, Wand2, CheckCircle2, AlertTriangle, ChevronDown, Trash2, } from 'lucide-react';
 import { LoadingSpinner, fieldClass } from './common/UIComponents';
 
 const METHOD_COLOR = {
@@ -104,6 +104,7 @@ export const RequestEditor = ({
   environments = [],
   activeEnvironmentId,
   onChangeEnvironment,
+  onDeleteEnvironment,
   currentUserId,
   isLockedByOther = false,
   lockHolderName = '',
@@ -128,6 +129,11 @@ export const RequestEditor = ({
   const [split, setSplit] = useState(50);
 
   const isEffectivelyEditable = canEdit && !isLockedByOther;
+  const [isEnvironmentMenuOpen, setIsEnvironmentMenuOpen] = useState(false);
+
+  const selectedEnvironment = environments.find(
+    (env) => env.id === activeEnvironmentId
+  );
 
   const savedPayload = useMemo(() => buildPayload(toEditorState(request)), [request]);
   const currentPayload = buildPayload(draft);
@@ -167,55 +173,55 @@ export const RequestEditor = ({
     onSave(request.id, currentPayload);
   };
 
- 
-const handleExecute = async () => {
+
+  const handleExecute = async () => {
     setExecuting(true);
     setExecError('');
 
     try {
-        if (request?.id) {
-            if (isEffectivelyEditable) {
-                await onSave(request.id, currentPayload);
-            }
-
-            const res = await requestsApi.execute(
-                request.id,
-                activeEnvironmentId || null,
-                30.0
-            );
-
-            // Display the response
-            setExecutionResult(res.data);
-
-            // Save response against this request ID
-            setResponseCache(prev => ({
-                ...prev,
-                [request.id]: res.data
-            }));
-
-        } else {
-            const res = await requestsApi.quickRun({
-                url: currentPayload.url,
-                method: currentPayload.method,
-                headers: currentPayload.headers,
-                query_params: currentPayload.query_params,
-                body: currentPayload.body,
-            });
-
-            setExecutionResult(res.data);
+      if (request?.id) {
+        if (isEffectivelyEditable) {
+          await onSave(request.id, currentPayload);
         }
 
-    } catch (err) {
-        const detail = err.response?.data?.detail;
-        setExecError(
-            typeof detail === 'string'
-                ? detail
-                : 'Execution failed. Check URL and server status.'
+        const res = await requestsApi.execute(
+          request.id,
+          activeEnvironmentId || null,
+          30.0
         );
+
+        // Display the response
+        setExecutionResult(res.data);
+
+        // Save response against this request ID
+        setResponseCache(prev => ({
+          ...prev,
+          [request.id]: res.data
+        }));
+
+      } else {
+        const res = await requestsApi.quickRun({
+          url: currentPayload.url,
+          method: currentPayload.method,
+          headers: currentPayload.headers,
+          query_params: currentPayload.query_params,
+          body: currentPayload.body,
+        });
+
+        setExecutionResult(res.data);
+      }
+
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      setExecError(
+        typeof detail === 'string'
+          ? detail
+          : 'Execution failed. Check URL and server status.'
+      );
     } finally {
-        setExecuting(false);
+      setExecuting(false);
     }
-};
+  };
 
 
   const handlePreviewResolve = async () => {
@@ -311,34 +317,93 @@ const handleExecute = async () => {
 
           <div className="flex items-center gap-2">
 
-            <div className="flex items-center gap-1.5 bg-slate-900 px-2 py-1 rounded-md border border-slate-700">
+
+            <div className="relative flex items-center gap-1.5 bg-slate-900 px-2 py-1 rounded-md border border-slate-700">
               <span className="text-[11px] text-slate-400">Env</span>
 
-              <select
-                value={activeEnvironmentId || ''}
-                aria-label="Active environment"
-                onChange={(e) =>
-                  onChangeEnvironment(
-                    e.target.value ? Number(e.target.value) : null
-                  )
+              <button
+                type="button"
+                onClick={() =>
+                  setIsEnvironmentMenuOpen((prev) => !prev)
                 }
-                className="bg-slate-900 text-xs text-slate-200 cursor-pointer focus:outline-none"
+                className="flex items-center gap-2 text-xs text-slate-200 hover:text-sky-300 min-w-24 justify-between"
               >
-                <option value="" className="bg-slate-900 text-slate-400">
-                  No environment
-                </option>
+                <span className="truncate max-w-28">
+                  {selectedEnvironment?.name || 'No environment'}
+                </span>
+                <ChevronDown size={13} />
+              </button>
 
-                {environments.map((env) => (
-                  <option
-                    key={env.id}
-                    value={env.id}
-                    className="bg-slate-900 text-slate-200"
+              {isEnvironmentMenuOpen && (
+                <div className="absolute top-full right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden">
+
+                  {/* No Environment */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onChangeEnvironment(null);
+                      setIsEnvironmentMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2.5 text-xs hover:bg-slate-800 ${!activeEnvironmentId
+                        ? 'text-sky-300'
+                        : 'text-slate-300'
+                      }`}
                   >
-                    {env.name} {env.is_default ? '(default)' : ''}
-                  </option>
-                ))}
-              </select>
+                    No Environment
+                  </button>
+
+                  <div className="border-t border-slate-800" />
+
+                  {/* Environment List */}
+                  {environments.map((env) => (
+                    <div
+                      key={env.id}
+                      className="flex items-center justify-between gap-2 px-3 py-2 hover:bg-slate-800"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onChangeEnvironment(env.id);
+                          setIsEnvironmentMenuOpen(false);
+                        }}
+                        className={`flex-1 min-w-0 text-left text-xs truncate ${activeEnvironmentId === env.id
+                            ? 'text-sky-300'
+                            : 'text-slate-300'
+                          }`}
+                      >
+                        {env.name}
+                        {env.is_default && (
+                          <span className="text-slate-500 ml-1">
+                            (default)
+                          </span>
+                        )}
+                      </button>
+
+                      {canEdit && (
+                        <button
+                          type="button"
+                          title={`Delete ${env.name}`}
+                          onClick={async () => {
+                            await onDeleteEnvironment?.(env.id);
+                            setIsEnvironmentMenuOpen(false);
+                          }}
+                          className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+
+                  {environments.length === 0 && (
+                    <p className="px-3 py-3 text-xs text-slate-500">
+                      No environments available.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
+
 
 
             {canEdit && (

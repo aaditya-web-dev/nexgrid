@@ -322,6 +322,43 @@ export const Dashboard = () => {
     }
   };
 
+  // Delete Environment
+  const handleDeleteEnvironment = async (environmentId) => {
+    const environment = environments.find(
+      (env) => env.id === environmentId
+    );
+
+    if (!environment) return;
+
+    if (
+      !(await confirm({
+        title: 'Delete Environment',
+        message: `Are you sure you want to delete "${environment.name}"? This will permanently delete its variables.`,
+      }))
+    ) {
+      return;
+    }
+
+    try {
+      await environmentsApi.delete(environmentId);
+
+      setEnvironments((prev) =>
+        prev.filter((env) => env.id !== environmentId)
+      );
+
+      // Reset selection if the deleted environment was active.
+      if (activeEnvironmentId === environmentId) {
+        setActiveEnvironmentId(null);
+      }
+
+      toast.success('Environment deleted');
+    } catch (err) {
+      setError(
+        err.response?.data?.detail || 'Failed to delete environment'
+      );
+    }
+  };
+
   const isOwner = activeRole === 'owner';
   const canEdit = activeRole === 'owner' || activeRole === 'editor';
 
@@ -414,6 +451,7 @@ export const Dashboard = () => {
                 environments={environments}
                 activeEnvironmentId={activeEnvironmentId}
                 onChangeEnvironment={setActiveEnvironmentId}
+                onDeleteEnvironment={handleDeleteEnvironment}
                 currentUserId={user?.id}
                 isLockedByMe={lockedRequests[selectedRequest?.id]?.user_id === user?.id}
                 isLockedByOther={

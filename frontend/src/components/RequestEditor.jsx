@@ -120,6 +120,7 @@ export const RequestEditor = ({
   const [showSecret, setShowSecret] = useState(false);
   const [executing, setExecuting] = useState(false);
   const [executionResult, setExecutionResult] = useState(null);
+  const [responseCache, setResponseCache] = useState({});
   const [execError, setExecError] = useState('');
   const [resolvedPreview, setResolvedPreview] = useState(null);
   const typingTimerRef = useRef(null);
@@ -145,48 +146,77 @@ export const RequestEditor = ({
     }, 1500);
   };
 
+  // Update request editor when navigating between requests
   useEffect(() => {
     if (!request) return;
+
     setDraft(toEditorState(request));
-    setExecutionResult(null);
     setExecError('');
     setResolvedPreview(null);
   }, [request]);
+
+  // Restore the response belonging to the selected request
+  useEffect(() => {
+    setExecutionResult(
+      request?.id ? responseCache[request.id] || null : null
+    );
+  }, [request?.id, responseCache]);
 
   const handleSave = () => {
     if (!isEffectivelyEditable) return;
     onSave(request.id, currentPayload);
   };
 
-  const handleExecute = async () => {
+ 
+const handleExecute = async () => {
     setExecuting(true);
     setExecError('');
-    setExecutionResult(null);
 
     try {
-      if (request?.id) {
-        if (isEffectivelyEditable) {
-          await onSave(request.id, currentPayload);
+        if (request?.id) {
+            if (isEffectivelyEditable) {
+                await onSave(request.id, currentPayload);
+            }
+
+            const res = await requestsApi.execute(
+                request.id,
+                activeEnvironmentId || null,
+                30.0
+            );
+
+            // Display the response
+            setExecutionResult(res.data);
+
+            // Save response against this request ID
+            setResponseCache(prev => ({
+                ...prev,
+                [request.id]: res.data
+            }));
+
+        } else {
+            const res = await requestsApi.quickRun({
+                url: currentPayload.url,
+                method: currentPayload.method,
+                headers: currentPayload.headers,
+                query_params: currentPayload.query_params,
+                body: currentPayload.body,
+            });
+
+            setExecutionResult(res.data);
         }
-        const res = await requestsApi.execute(request.id, activeEnvironmentId || null, 30.0);
-        setExecutionResult(res.data);
-      } else {
-        const res = await requestsApi.quickRun({
-          url: currentPayload.url,
-          method: currentPayload.method,
-          headers: currentPayload.headers,
-          query_params: currentPayload.query_params,
-          body: currentPayload.body,
-        });
-        setExecutionResult(res.data);
-      }
+
     } catch (err) {
-      const detail = err.response?.data?.detail;
-      setExecError(typeof detail === 'string' ? detail : 'Execution failed. Check URL and server status.');
+        const detail = err.response?.data?.detail;
+        setExecError(
+            typeof detail === 'string'
+                ? detail
+                : 'Execution failed. Check URL and server status.'
+        );
     } finally {
-      setExecuting(false);
+        setExecuting(false);
     }
-  };
+};
+
 
   const handlePreviewResolve = async () => {
     if (!request?.id) return;
@@ -504,8 +534,8 @@ export const RequestEditor = ({
                           disabled={!isEffectivelyEditable}
                           onClick={() => updateDraft({ bodyType: bt })}
                           className={`px-2.5 py-1 text-[11px] font-medium rounded cursor-pointer transition-colors disabled:cursor-not-allowed ${draft.bodyType === bt
-                              ? 'bg-slate-700 text-slate-100'
-                              : 'text-slate-400 hover:text-slate-200'
+                            ? 'bg-slate-700 text-slate-100'
+                            : 'text-slate-400 hover:text-slate-200'
                             }`}
                         >
                           {bt === 'x_www_form_urlencoded' ? 'form-urlencoded' : bt}

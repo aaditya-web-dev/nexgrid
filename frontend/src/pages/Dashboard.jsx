@@ -312,10 +312,10 @@ export const Dashboard = () => {
 
         {/* User profile & actions */}
         <div className="flex items-center gap-3 shrink-0">
-          <NotificationsDropdown
+          {/* <NotificationsDropdown
             workspaceId={activeWorkspace?.id}
             incomingNotification={incomingNotification}
-          />
+          /> */}
 
           <div className="hidden md:flex items-center gap-2 text-xs">
             <span className="text-slate-400">Signed in as</span>

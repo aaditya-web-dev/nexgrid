@@ -20,7 +20,7 @@ import { requestsApi } from '../api';
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 const BODY_TYPES = ['none', 'json', 'raw', 'x_www_form_urlencoded'];
-const TABS = ['params', 'headers', 'body', 'auth', 'preview', 'comments', 'tests'];
+const TABS = ['params', 'headers', 'body', 'auth', 'preview', 'tests'];
 
 const toRows = (obj) =>
   Object.entries(obj || {}).map(([k, v]) => ({ key: k, value: String(v), enabled: true }));
@@ -81,9 +81,8 @@ const SaveStatus = ({ canEdit, isEditable, isDirty }) => {
   if (!isEditable) return <span className="text-[11px] text-slate-500">Read-only</span>;
   return (
     <span
-      className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${
-        isDirty ? 'text-amber-300' : 'text-slate-500'
-      }`}
+      className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${isDirty ? 'text-amber-300' : 'text-slate-500'
+        }`}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${isDirty ? 'bg-amber-400' : 'bg-emerald-400'}`} />
       {isDirty ? 'Unsaved changes' : 'All changes saved'}
@@ -281,22 +280,36 @@ export const RequestEditor = ({
           </div>
 
           <div className="flex items-center gap-2">
+
             <div className="flex items-center gap-1.5 bg-slate-900 px-2 py-1 rounded-md border border-slate-700">
               <span className="text-[11px] text-slate-400">Env</span>
+
               <select
                 value={activeEnvironmentId || ''}
                 aria-label="Active environment"
-                onChange={(e) => onChangeEnvironment(e.target.value ? Number(e.target.value) : null)}
-                className="bg-transparent text-xs text-slate-200 cursor-pointer focus:outline-none"
+                onChange={(e) =>
+                  onChangeEnvironment(
+                    e.target.value ? Number(e.target.value) : null
+                  )
+                }
+                className="bg-slate-900 text-xs text-slate-200 cursor-pointer focus:outline-none"
               >
-                <option value="">No environment</option>
+                <option value="" className="bg-slate-900 text-slate-400">
+                  No environment
+                </option>
+
                 {environments.map((env) => (
-                  <option key={env.id} value={env.id}>
+                  <option
+                    key={env.id}
+                    value={env.id}
+                    className="bg-slate-900 text-slate-200"
+                  >
                     {env.name} {env.is_default ? '(default)' : ''}
                   </option>
                 ))}
               </select>
             </div>
+
 
             {canEdit && (
               <>
@@ -424,9 +437,8 @@ export const RequestEditor = ({
                   setActiveTab(t);
                   if (t === 'preview') handlePreviewResolve();
                 }}
-                className={`relative px-2.5 py-3 capitalize whitespace-nowrap cursor-pointer transition-colors ${
-                  activeTab === t ? 'text-sky-300' : 'text-slate-400 hover:text-slate-200'
-                }`}
+                className={`relative px-2.5 py-3 capitalize whitespace-nowrap cursor-pointer transition-colors ${activeTab === t ? 'text-sky-300' : 'text-slate-400 hover:text-slate-200'
+                  }`}
               >
                 {t}
                 {(t === 'params' || t === 'headers') && countOf(t === 'params' ? draft.queryParams : draft.headers) > 0 && (
@@ -491,11 +503,10 @@ export const RequestEditor = ({
                           type="button"
                           disabled={!isEffectivelyEditable}
                           onClick={() => updateDraft({ bodyType: bt })}
-                          className={`px-2.5 py-1 text-[11px] font-medium rounded cursor-pointer transition-colors disabled:cursor-not-allowed ${
-                            draft.bodyType === bt
+                          className={`px-2.5 py-1 text-[11px] font-medium rounded cursor-pointer transition-colors disabled:cursor-not-allowed ${draft.bodyType === bt
                               ? 'bg-slate-700 text-slate-100'
                               : 'text-slate-400 hover:text-slate-200'
-                          }`}
+                            }`}
                         >
                           {bt === 'x_www_form_urlencoded' ? 'form-urlencoded' : bt}
                         </button>
@@ -504,31 +515,31 @@ export const RequestEditor = ({
 
                     {draft.bodyType !== 'none' ? (
                       <div className="space-y-2">
-                      {draft.bodyType === 'json' && (
-                        <div className="flex items-center justify-between text-[11px]">
-                          {bodyJson ? (
-                            bodyJson.ok ? (
-                              <span className="inline-flex items-center gap-1 text-emerald-400"><CheckCircle2 className="w-3 h-3" /> Valid JSON</span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 text-amber-300 min-w-0"><AlertTriangle className="w-3 h-3 shrink-0" /> <span className="truncate">{bodyJson.msg}</span></span>
-                            )
-                          ) : <span className="text-slate-500">JSON body</span>}
-                          <button type="button" onClick={beautify} disabled={!isEffectivelyEditable || !bodyJson?.ok}
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-slate-700 text-slate-300 hover:text-slate-100 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors">
-                            <Wand2 className="w-3 h-3" /> Beautify
-                          </button>
-                        </div>
-                      )}
-                      <textarea
-                        spellCheck={false}
-                        rows={12}
-                        value={draft.body}
-                        disabled={!isEffectivelyEditable}
-                        aria-label="Request body"
-                        onChange={(e) => updateDraft({ body: e.target.value })}
-                        placeholder='{"key": "value"}'
-                        className={`${fieldClass} w-full p-3 font-mono leading-relaxed resize-y ${draft.bodyType === 'json' && bodyJson && !bodyJson.ok ? 'border-amber-400/50' : ''}`}
-                      />
+                        {draft.bodyType === 'json' && (
+                          <div className="flex items-center justify-between text-[11px]">
+                            {bodyJson ? (
+                              bodyJson.ok ? (
+                                <span className="inline-flex items-center gap-1 text-emerald-400"><CheckCircle2 className="w-3 h-3" /> Valid JSON</span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-amber-300 min-w-0"><AlertTriangle className="w-3 h-3 shrink-0" /> <span className="truncate">{bodyJson.msg}</span></span>
+                              )
+                            ) : <span className="text-slate-500">JSON body</span>}
+                            <button type="button" onClick={beautify} disabled={!isEffectivelyEditable || !bodyJson?.ok}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-slate-700 text-slate-300 hover:text-slate-100 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors">
+                              <Wand2 className="w-3 h-3" /> Beautify
+                            </button>
+                          </div>
+                        )}
+                        <textarea
+                          spellCheck={false}
+                          rows={12}
+                          value={draft.body}
+                          disabled={!isEffectivelyEditable}
+                          aria-label="Request body"
+                          onChange={(e) => updateDraft({ body: e.target.value })}
+                          placeholder='{"key": "value"}'
+                          className={`${fieldClass} w-full p-3 font-mono leading-relaxed resize-y ${draft.bodyType === 'json' && bodyJson && !bodyJson.ok ? 'border-amber-400/50' : ''}`}
+                        />
                       </div>
                     ) : (
                       <div className="text-xs text-slate-500 py-6 text-center">This request has no body.</div>

@@ -14,6 +14,7 @@ from app.routers import (
     locks,
     comments,
     notifications,
+    test_cases,
 )
 from app.websocket import router as ws_router
 from app import models  # noqa: F401  (registers all models with SQLAlchemy)
@@ -45,6 +46,7 @@ app.include_router(environments.router)
 app.include_router(locks.router)
 app.include_router(comments.router)
 app.include_router(notifications.router)
+app.include_router(test_cases.router)
 app.include_router(health.router)
 app.include_router(ws_router)
 

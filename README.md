@@ -16,8 +16,8 @@ The platform provides API request management, environment configuration, authent
 - **Authentication** – JWT-based user authentication.
 - **Real-Time Collaboration** – WebSocket-based communication.
 - **Request Locking** – Prevent conflicting edits during collaborative work.
-- **Comments** – Collaborate through workspace discussions.
-- **Notifications** – Receive updates about workspace activities.
+<!-- - **Comments** – Collaborate through workspace discussions.
+- **Notifications** – Receive updates about workspace activities. -->
 
 ## Tech Stack
 
@@ -25,12 +25,9 @@ The platform provides API request management, environment configuration, authent
 - React.js
 - Vite
 - React Router DOM
-- Zustand
-- TanStack React Query
+- Framer Motion
 - Tailwind CSS
 - Axios
-- Zod
-- React Hook Form
 
 ### Backend
 - Python
@@ -42,13 +39,11 @@ The platform provides API request management, environment configuration, authent
 - WebSockets
 
 ### Database
-- SQLite (Development)
-- MySQL (Optional)
+- SQLite
 
 ### Development Tools
 - Git & GitHub
 - VS Code
-- Postman
 
 ## Project Structure
 

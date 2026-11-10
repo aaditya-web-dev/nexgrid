@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
@@ -11,6 +12,7 @@ import {
   Settings,
   Trash2,
   X,
+  Check,
 } from 'lucide-react';
 import { MethodBadge } from './common/UIComponents';
 
@@ -24,15 +26,30 @@ const treeAnimation = {
 const TreeSkeleton = () => (
   <div className="space-y-2.5 px-2 pt-1" aria-hidden="true">
     {[70, 55, 80, 60, 45].map((w, i) => (
-      <div key={i} className="flex items-center gap-2" style={{ paddingLeft: i % 3 === 0 ? 0 : 18 }}>
+      <div
+        key={i}
+        className="flex items-center gap-2"
+        style={{ paddingLeft: i % 3 === 0 ? 0 : 18 }}
+      >
         <div className="w-3.5 h-3.5 rounded bg-slate-800 animate-pulse" />
-        <div className="h-3 rounded bg-slate-800 animate-pulse" style={{ width: `${w}%` }} />
+        <div
+          className="h-3 rounded bg-slate-800 animate-pulse"
+          style={{ width: `${w}%` }}
+        />
       </div>
     ))}
   </div>
 );
 
-const RequestRow = ({ req, isSelected, lock, typingUser, canEdit, onSelect, onDelete }) => (
+const RequestRow = ({
+  req,
+  isSelected,
+  lock,
+  typingUser,
+  canEdit,
+  onSelect,
+  onDelete,
+}) => (
   <motion.div
     layout="position"
     initial={{ opacity: 0, x: -6 }}
@@ -48,18 +65,29 @@ const RequestRow = ({ req, isSelected, lock, typingUser, canEdit, onSelect, onDe
   >
     <div className="flex items-center gap-2 min-w-0">
       <MethodBadge method={req.method} />
-      <span className={`truncate ${isSelected ? 'font-medium' : ''}`}>{req.name}</span>
+      <span className={`truncate ${isSelected ? 'font-medium' : ''}`}>
+        {req.name}
+      </span>
+
       {lock && (
-        <span title={`Locked by ${lock.username}`} className="shrink-0 text-amber-400">
+        <span
+          title={`Locked by ${lock.username}`}
+          className="shrink-0 text-amber-400"
+        >
           <Lock className="w-3 h-3" aria-label="Locked" />
         </span>
       )}
+
       {typingUser && (
-        <span title={`${typingUser} is typing...`} className="shrink-0 text-sky-400">
+        <span
+          title={`${typingUser} is typing...`}
+          className="shrink-0 text-sky-400"
+        >
           <Pencil className="w-3 h-3 animate-pulse" aria-label="Typing" />
         </span>
       )}
     </div>
+
     {canEdit && (
       <button
         type="button"
@@ -76,25 +104,40 @@ const RequestRow = ({ req, isSelected, lock, typingUser, canEdit, onSelect, onDe
   </motion.div>
 );
 
-const TreeRowButton = ({ children, onClick, title, tone = 'default' }) => (
+const TreeRowButton = ({
+  children,
+  onClick,
+  title,
+  tone = 'default',
+  disabled = false,
+}) => (
   <button
     type="button"
+    disabled={disabled}
     onClick={(e) => {
       e.stopPropagation();
       onClick();
     }}
     title={title}
     aria-label={title}
-    className={`p-1 rounded text-slate-400 hover:bg-slate-700/60 transition-colors cursor-pointer ${
-      tone === 'danger' ? 'hover:text-rose-400' : 'hover:text-sky-300'
+    className={`p-1 rounded text-slate-400 hover:bg-slate-700/60 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+      tone === 'danger'
+        ? 'hover:text-rose-400'
+        : 'hover:text-sky-300'
     }`}
   >
     {children}
   </button>
 );
 
-const ExpandToggle = ({ isOpen, onToggle, icon: Icon, label, trailing }) => (
-  <div className="flex items-center gap-1 px-1.5 py-1 rounded-md hover:bg-slate-800/70 group cursor-pointer text-slate-200">
+const ExpandToggle = ({
+  isOpen,
+  onToggle,
+  icon: Icon,
+  label,
+  trailing,
+}) => (
+  <div className="flex items-center gap-1 px-1.5 py-1 rounded-md hover:bg-slate-800/70 group text-slate-200">
     <button
       type="button"
       onClick={onToggle}
@@ -108,9 +151,16 @@ const ExpandToggle = ({ isOpen, onToggle, icon: Icon, label, trailing }) => (
       >
         <ChevronRight className="w-3.5 h-3.5" />
       </motion.span>
-      <Icon className={`w-3.5 h-3.5 shrink-0 ${isOpen ? 'text-sky-300' : 'text-slate-500'}`} />
+
+      <Icon
+        className={`w-3.5 h-3.5 shrink-0 ${
+          isOpen ? 'text-sky-300' : 'text-slate-500'
+        }`}
+      />
+
       <span className="text-xs font-medium truncate">{label}</span>
     </button>
+
     {trailing}
   </div>
 );
@@ -130,6 +180,7 @@ export const Sidebar = ({
   onCreateFolder,
   onCreateRequest,
   onDeleteCollection,
+  onRenameCollection,
   onDeleteRequest,
   canEdit,
   lockedRequests = {},
@@ -137,28 +188,89 @@ export const Sidebar = ({
   loading = false,
 }) => {
   const reduceMotion = useReducedMotion();
+
   const [expandedCollections, setExpandedCollections] = useState({});
   const [expandedFolders, setExpandedFolders] = useState({});
   const [query, setQuery] = useState('');
 
+  const [editingCollectionId, setEditingCollectionId] = useState(null);
+  const [editingCollectionName, setEditingCollectionName] = useState('');
+  const [renaming, setRenaming] = useState(false);
+
   const normalizedQuery = query.trim().toLowerCase();
   const isSearching = normalizedQuery.length > 0;
 
-  const matches = (req) => req.name.toLowerCase().includes(normalizedQuery);
+  const matches = (req) =>
+    (req.name || '').toLowerCase().includes(normalizedQuery);
 
-  const isCollectionOpen = (id) => (isSearching ? true : !!expandedCollections[id]);
-  const isFolderOpen = (id) => (isSearching ? true : !!expandedFolders[id]);
+  const isCollectionOpen = (id) =>
+    isSearching ? true : !!expandedCollections[id];
+
+  const isFolderOpen = (id) =>
+    isSearching ? true : !!expandedFolders[id];
 
   const toggleCollection = (id) => {
-    setExpandedCollections((prev) => ({ ...prev, [id]: !prev[id] }));
+    setExpandedCollections((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
   };
 
   const toggleFolder = (id) => {
-    setExpandedFolders((prev) => ({ ...prev, [id]: !prev[id] }));
+    setExpandedFolders((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
+  const startRenameCollection = (col) => {
+    setEditingCollectionId(col.id);
+    setEditingCollectionName(col.name);
+  };
+
+  const cancelRenameCollection = () => {
+    if (renaming) return;
+
+    setEditingCollectionId(null);
+    setEditingCollectionName('');
+  };
+
+  const saveRenameCollection = async (colId) => {
+    const newName = editingCollectionName.trim();
+
+    if (!newName || renaming) return;
+
+    const currentName = collections.find(
+      (col) => col.id === colId
+    )?.name;
+
+    if (newName === currentName) {
+      cancelRenameCollection();
+      return;
+    }
+
+    if (!onRenameCollection) {
+      console.error('onRenameCollection callback is missing');
+      return;
+    }
+
+    try {
+      setRenaming(true);
+      await onRenameCollection(colId, newName);
+
+      setEditingCollectionId(null);
+      setEditingCollectionName('');
+    } catch (error) {
+      console.error('Failed to rename collection:', error);
+    } finally {
+      setRenaming(false);
+    }
   };
 
   const visibleCollections = isSearching
-    ? collections.filter((col) => (requestsByCollection[col.id] || []).some(matches))
+    ? collections.filter((col) =>
+        (requestsByCollection[col.id] || []).some(matches)
+      )
     : collections;
 
   const rowProps = (req) => ({
@@ -173,18 +285,24 @@ export const Sidebar = ({
 
   return (
     <aside className="w-72 bg-slate-900 border-r border-slate-800 flex flex-col h-full shrink-0 select-none">
+
       {/* Workspace Selector */}
       <div className="p-3 border-b border-slate-800 flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
             Workspace
           </span>
+
           <div className="flex items-center gap-1">
             {activeWorkspace && (
-              <TreeRowButton onClick={onOpenWorkspaceSettings} title="Workspace settings and members">
+              <TreeRowButton
+                onClick={onOpenWorkspaceSettings}
+                title="Workspace settings and members"
+              >
                 <Settings className="w-3.5 h-3.5" />
               </TreeRowButton>
             )}
+
             <button
               type="button"
               onClick={onCreateWorkspace}
@@ -207,7 +325,10 @@ export const Sidebar = ({
               {ws.name}
             </option>
           ))}
-          {workspaces.length === 0 && <option value="">No workspaces found</option>}
+
+          {workspaces.length === 0 && (
+            <option value="">No workspaces found</option>
+          )}
         </select>
       </div>
 
@@ -215,6 +336,7 @@ export const Sidebar = ({
       <div className="px-3 pt-3">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+
           <input
             type="search"
             value={query}
@@ -232,6 +354,7 @@ export const Sidebar = ({
           <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
             Collections
           </span>
+
           {canEdit && (
             <button
               type="button"
@@ -261,35 +384,113 @@ export const Sidebar = ({
               const isColOpen = isCollectionOpen(col.id);
               const folders = foldersByCollection[col.id] || [];
               const allRequests = requestsByCollection[col.id] || [];
-              const visibleRequests = isSearching ? allRequests.filter(matches) : allRequests;
-              const rootRequests = visibleRequests.filter((r) => !r.folder_id);
+
+              const visibleRequests = isSearching
+                ? allRequests.filter(matches)
+                : allRequests;
+
+              const rootRequests = visibleRequests.filter(
+                (r) => !r.folder_id
+              );
+
+              const isEditing = editingCollectionId === col.id;
 
               return (
                 <div key={col.id}>
-                  <ExpandToggle
-                    isOpen={isColOpen}
-                    onToggle={() => toggleCollection(col.id)}
-                    icon={Folder}
-                    label={col.name}
-                    trailing={
-                      <>
-                      <span className="text-[10px] font-mono text-slate-600 group-hover:hidden px-1">{allRequests.length}</span>
-                      {canEdit && (
-                        <div className="flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                          <TreeRowButton onClick={() => onCreateRequest(col.id, null)} title="Add request to collection">
-                            <Plus className="w-3.5 h-3.5" />
-                          </TreeRowButton>
-                          <TreeRowButton onClick={() => onCreateFolder(col.id)} title="Add folder">
-                            <FolderOpen className="w-3.5 h-3.5" />
-                          </TreeRowButton>
-                          <TreeRowButton onClick={() => onDeleteCollection(col.id)} title="Delete collection" tone="danger">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </TreeRowButton>
-                        </div>
-                      )}
-                      </>
-                    }
-                  />
+                  {isEditing ? (
+                    <div className="flex items-center gap-1 px-1.5 py-1 rounded-md bg-slate-800/70">
+                      <Folder className="w-3.5 h-3.5 shrink-0 text-sky-300" />
+
+                      <input
+                        autoFocus
+                        value={editingCollectionName}
+                        disabled={renaming}
+                        onChange={(e) =>
+                          setEditingCollectionName(e.target.value)
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            saveRenameCollection(col.id);
+                          }
+
+                          if (e.key === 'Escape') {
+                            cancelRenameCollection();
+                          }
+                        }}
+                        className="flex-1 min-w-0 bg-slate-950 border border-sky-500 rounded px-2 py-1 text-xs text-white outline-none"
+                        aria-label="Rename collection"
+                      />
+
+                      <TreeRowButton
+                        onClick={() => saveRenameCollection(col.id)}
+                        title="Save collection name"
+                        disabled={renaming || !editingCollectionName.trim()}
+                      >
+                        {renaming ? (
+                          <span className="text-[10px]">...</span>
+                        ) : (
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        )}
+                      </TreeRowButton>
+
+                      <TreeRowButton
+                        onClick={cancelRenameCollection}
+                        title="Cancel rename"
+                        tone="danger"
+                        disabled={renaming}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </TreeRowButton>
+                    </div>
+                  ) : (
+                    <ExpandToggle
+                      isOpen={isColOpen}
+                      onToggle={() => toggleCollection(col.id)}
+                      icon={Folder}
+                      label={col.name}
+                      trailing={
+                        <>
+                          <span className="text-[10px] font-mono text-slate-600 group-hover:hidden px-1">
+                            {allRequests.length}
+                          </span>
+
+                          {canEdit && (
+                            <div className="flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                              <TreeRowButton
+                                onClick={() => startRenameCollection(col)}
+                                title="Rename collection"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </TreeRowButton>
+
+                              <TreeRowButton
+                                onClick={() => onCreateRequest(col.id, null)}
+                                title="Add request to collection"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                              </TreeRowButton>
+
+                              <TreeRowButton
+                                onClick={() => onCreateFolder(col.id)}
+                                title="Add folder"
+                              >
+                                <FolderOpen className="w-3.5 h-3.5" />
+                              </TreeRowButton>
+
+                              <TreeRowButton
+                                onClick={() => onDeleteCollection(col.id)}
+                                title="Delete collection"
+                                tone="danger"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </TreeRowButton>
+                            </div>
+                          )}
+                        </>
+                      }
+                    />
+                  )}
 
                   <AnimatePresence initial={false}>
                     {isColOpen && (
@@ -300,6 +501,7 @@ export const Sidebar = ({
                       >
                         {folders.map((folder) => {
                           const isFolderOpenNow = isFolderOpen(folder.id);
+
                           const folderRequests = visibleRequests.filter(
                             (r) => r.folder_id === folder.id
                           );
@@ -314,7 +516,12 @@ export const Sidebar = ({
                                 trailing={
                                   canEdit && (
                                     <div className="flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                                      <TreeRowButton onClick={() => onCreateRequest(col.id, folder.id)} title="Add request into folder">
+                                      <TreeRowButton
+                                        onClick={() =>
+                                          onCreateRequest(col.id, folder.id)
+                                        }
+                                        title="Add request into folder"
+                                      >
                                         <Plus className="w-3.5 h-3.5" />
                                       </TreeRowButton>
                                     </div>
@@ -331,9 +538,13 @@ export const Sidebar = ({
                                   >
                                     <AnimatePresence initial={false}>
                                       {folderRequests.map((req) => (
-                                        <RequestRow key={req.id} {...rowProps(req)} />
+                                        <RequestRow
+                                          key={req.id}
+                                          {...rowProps(req)}
+                                        />
                                       ))}
                                     </AnimatePresence>
+
                                     {folderRequests.length === 0 && (
                                       <div className="text-[11px] text-slate-600 py-1 pl-2">
                                         Empty folder
@@ -348,7 +559,10 @@ export const Sidebar = ({
 
                         <AnimatePresence initial={false}>
                           {rootRequests.map((req) => (
-                            <RequestRow key={req.id} {...rowProps(req)} />
+                            <RequestRow
+                              key={req.id}
+                              {...rowProps(req)}
+                            />
                           ))}
                         </AnimatePresence>
 

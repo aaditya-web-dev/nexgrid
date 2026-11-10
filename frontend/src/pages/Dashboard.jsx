@@ -215,6 +215,37 @@ export const Dashboard = () => {
     }
   };
 
+
+
+  // Rename Collection
+  const handleRenameCollection = async (colId, newName) => {
+    const trimmedName = newName.trim();
+
+    if (!trimmedName) return;
+
+    try {
+      const res = await collectionsApi.update(colId, {
+        name: trimmedName,
+      });
+
+      setCollections((prev) =>
+        prev.map((col) =>
+          col.id === colId
+            ? { ...col, ...res.data, name: trimmedName }
+            : col
+        )
+      );
+
+      toast.success('Collection renamed');
+    } catch (err) {
+      setError(
+        err.response?.data?.detail || 'Failed to rename collection'
+      );
+
+      throw err;
+    }
+  };
+
   // 5. Create Folder
   const handleCreateFolder = async (e) => {
     e.preventDefault();
@@ -366,6 +397,7 @@ export const Dashboard = () => {
               }}
               onCreateRequest={handleCreateRequest}
               onDeleteCollection={handleDeleteCollection}
+              onRenameCollection={handleRenameCollection}
               onDeleteRequest={handleDeleteRequest}
               canEdit={canEdit}
               lockedRequests={lockedRequests}

@@ -40,8 +40,15 @@ class WorkspaceResponse(BaseModel):
 
 class MemberInvite(BaseModel):
     """POST /api/workspaces/{id}/members — request body."""
-    user_id: int = Field(..., examples=[2])
-    role: WorkspaceRole = Field(WorkspaceRole.VIEWER, examples=[WorkspaceRole.EDITOR])
+    identifier: str = Field(
+        ...,
+        min_length=1,
+        examples=["aaditya", "aaditya@gmail.com"]
+    )
+    role: WorkspaceRole = Field(
+        WorkspaceRole.VIEWER,
+        examples=[WorkspaceRole.EDITOR]
+    )
 
 
 class MemberRoleUpdate(BaseModel):
@@ -54,6 +61,7 @@ class MemberResponse(BaseModel):
     id: int
     workspace_id: int
     user_id: int
+    username: str
     role: WorkspaceRole
     joined_at: datetime
 

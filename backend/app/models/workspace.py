@@ -75,6 +75,10 @@ class WorkspaceMember(Base):
     # Relationships
     workspace = relationship("Workspace", back_populates="members")
     user = relationship("User", back_populates="memberships")
+    
+    @property
+    def username(self):
+        return self.user.username
 
     def __repr__(self):
         return f"<WorkspaceMember ws={self.workspace_id} user={self.user_id} role={self.role}>"

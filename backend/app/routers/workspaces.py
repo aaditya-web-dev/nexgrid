@@ -15,7 +15,7 @@ PATCH  /api/workspaces/{workspace_id}/members/{user_id}     change role (owner o
 DELETE /api/workspaces/{workspace_id}/members/{user_id}     remove member (owner only)
 """
 from typing import Annotated
-
+from sqlalchemy import or_, func
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -208,43 +208,69 @@ def invite_member(
     ws = get_workspace_or_404(workspace_id, db)
     assert_owner(ws, current_user)
 
-    # Make sure the target user actually exists
-    target = db.query(User).filter(User.id == payload.user_id).first()
+    # Search user by username or email
+    identifier = payload.identifier.strip().lower()
+
+    target = (
+        db.query(User)
+        .filter(
+            User.is_active.is_(True),
+            or_(
+                func.lower(User.username) == identifier,
+                func.lower(User.email) == identifier,
+            )
+        )
+        .first()
+    )
+
     if not target:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found or account is inactive",
+        )
+
+    # Prevent inviting yourself
+    if target.id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You are already the owner of this workspace",
+        )
 
     # Prevent duplicate membership
     existing = (
         db.query(WorkspaceMember)
         .filter(
             WorkspaceMember.workspace_id == workspace_id,
-            WorkspaceMember.user_id == payload.user_id,
+            WorkspaceMember.user_id == target.id,
         )
         .first()
     )
+
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="User is already a member of this workspace",
         )
 
-    # Prevent inviting with OWNER role (owner is set at creation only)
+    # Prevent inviting with OWNER role
     if payload.role == WorkspaceRole.OWNER:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot invite a user as OWNER. Transfer ownership instead.",
         )
 
+    # Create membership
     member = WorkspaceMember(
         workspace_id=workspace_id,
-        user_id=payload.user_id,
+        user_id=target.id,
         role=payload.role,
     )
+
     db.add(member)
     db.commit()
     db.refresh(member)
-    return member
 
+    return member
 
 @router.get(
     "/{workspace_id}/members",

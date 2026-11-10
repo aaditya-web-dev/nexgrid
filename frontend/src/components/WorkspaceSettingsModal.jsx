@@ -35,7 +35,8 @@ export const WorkspaceSettingsModal = ({
   onRefresh,
 }) => {
   const [activeTab, setActiveTab] = useState('members');
-  const [inviteUserId, setInviteUserId] = useState('');
+  // const [inviteUserId, setInviteUserId] = useState('');
+  const [inviteIdentifier, setInviteIdentifier] = useState('');
   const [inviteRole, setInviteRole] = useState('viewer');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -47,21 +48,28 @@ export const WorkspaceSettingsModal = ({
   const confirm = useConfirm();
   const handleInvite = async (e) => {
     e.preventDefault();
+
     setError('');
     setSuccess('');
     setLoading(true);
 
     try {
       await workspacesApi.inviteMember(workspace.id, {
-        user_id: Number(inviteUserId),
+        identifier: inviteIdentifier.trim(),
         role: inviteRole,
       });
+
       setSuccess('Member invited successfully');
-      setInviteUserId('');
+      setInviteIdentifier('');
       onRefresh();
+
     } catch (err) {
       const detail = err.response?.data?.detail;
-      setError(typeof detail === 'string' ? detail : 'Failed to invite member');
+      setError(
+        typeof detail === 'string'
+          ? detail
+          : 'Failed to invite member'
+      );
     } finally {
       setLoading(false);
     }
@@ -121,11 +129,10 @@ export const WorkspaceSettingsModal = ({
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`pb-2.5 border-b-2 -mb-px cursor-pointer transition-colors ${
-                activeTab === tab.id
+              className={`pb-2.5 border-b-2 -mb-px cursor-pointer transition-colors ${activeTab === tab.id
                   ? 'border-sky-400 text-sky-300'
                   : 'border-transparent text-slate-400 hover:text-slate-200'
-              }`}
+                }`}
             >
               {tab.label}
               {tab.id === 'members' && <span className="ml-1.5 text-slate-500">{members.length}</span>}
@@ -146,12 +153,12 @@ export const WorkspaceSettingsModal = ({
               <Panel title="Invite member" onSubmit={handleInvite}>
                 <div className="flex gap-2">
                   <input
-                    type="number"
+                    type="text"
                     required
-                    placeholder="User ID"
-                    aria-label="User ID"
-                    value={inviteUserId}
-                    onChange={(e) => setInviteUserId(e.target.value)}
+                    placeholder="Username or email"
+                    aria-label="Username or email"
+                    value={inviteIdentifier}
+                    onChange={(e) => setInviteIdentifier(e.target.value)}
                     className={`${fieldClass} flex-1 min-w-0`}
                   />
                   <select
